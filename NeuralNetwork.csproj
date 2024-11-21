@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Nullable>enable</Nullable>
+        <AssemblyName>RojoinNeuralNetwork</AssemblyName>
+        <RootNamespace>RojoinNeuralNetwork</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Folder Include="Scripts\ECS\" />
+    </ItemGroup>
+
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+      <Exec Command="xcopy &quot;$(TargetDir)$(TargetName).dll&quot; &quot;$(ProjectDir)..\UnityProject\Assets\Lib\&quot; /F /R /Y /I" />
+    </Target>
+
+</Project>
