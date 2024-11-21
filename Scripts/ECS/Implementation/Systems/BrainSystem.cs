@@ -48,24 +48,27 @@ public class BrainSystem : ECSSystem
             outputsComponents[entity].outputs = new float[inputComponents[entity].inputs.Length];
 
             outputsComponents[entity].outputs = FirstLayerSynapsis(entity, inputComponents[entity].inputs);
+            inputComponents[entity].size = outputsComponents[entity].outputs.Length;
             inputComponents[entity].inputs = outputsComponents[entity].outputs;
-
-            for (int layer = 0; layer < hiddenLayerComponents[entity].hiddenLayers.Length; layer++)
-            {
-                outputsComponents[entity].outputs = LayerSynapsis(entity, inputComponents[entity].inputs, layer);
-                inputComponents[entity].inputs = outputsComponents[entity].outputs;
-            }
-            outputsComponents[entity].outputs = inputComponents[entity].inputs;
-            outputsComponents[entity].outputs = OutputLayerSynapsis(entity, inputComponents[entity].inputs);
+            outputsComponents[entity].outputs = new float[hiddenLayerComponents[entity].HiggestLayerSize];
+             for (int layer = 0; layer < hiddenLayerComponents[entity].hiddenLayers.Length; layer++)
+             {
+                 LayerSynapsis(entity, inputComponents[entity].inputs, layer,ref inputComponents[entity].size);
+                 inputComponents[entity].inputs = outputsComponents[entity].outputs;
+             }
+            outputsComponents[entity].outputs = OutputLayerSynapsis(entity, inputComponents[entity].inputs,ref inputComponents[entity].size);
         });
     }
 
-    private float[] LayerSynapsis(uint entity, float[] inputs, int layer)
+    private float[] LayerSynapsis(uint entity, float[] inputs, int layer, ref int size)
     {
         int neuronCount = hiddenLayerComponents[entity].hiddenLayers[layer].weights.GetLength(0);
-        outputsComponents[entity].outputs = new float[neuronCount];
+        Array.Resize(ref outputsComponents[entity].outputs,neuronCount);
+ 
         Parallel.For(0, neuronCount,parallelOptions, 
             neuron => {outputsComponents[entity].outputs[neuron] = NeuronSynapsis(entity, neuron, inputs, layer); });
+        
+        size = neuronCount;
         return outputsComponents[entity].outputs;
     }
 
@@ -76,10 +79,10 @@ public class BrainSystem : ECSSystem
         return outputsComponents[entity].outputs;
     }
 
-    private float[] OutputLayerSynapsis(uint entity, float[] inputs)
+    private float[] OutputLayerSynapsis(uint entity, float[] inputs, ref int size)
     {
         int neuronCount = outputsLayerComponents[entity].layer.weights.GetLength(0);
-        outputsComponents[entity].outputs = new float[neuronCount];
+        Array.Resize(ref outputsComponents[entity].outputs,neuronCount);
         Parallel.For(0, neuronCount,parallelOptions, 
             neuron => { outputsComponents[entity].outputs[neuron] = LastNeuronSynapsis(entity, neuron, inputs); });
         return outputsComponents[entity].outputs;
@@ -90,7 +93,8 @@ public class BrainSystem : ECSSystem
 
         var bag = new ConcurrentBag<float>();
         float a = 0;
-        Parallel.For(0, hiddenLayerComponents[entity].hiddenLayers[layer].weights.GetLength(1),parallelOptions, 
+        int exclusive = hiddenLayerComponents[entity].hiddenLayers[layer].weights.GetLength(1);
+        Parallel.For(0, exclusive,parallelOptions, 
             k =>
             {
                 bag.Add(hiddenLayerComponents[entity].hiddenLayers[layer].weights[neuron, k] * inputs[k]);
@@ -98,13 +102,11 @@ public class BrainSystem : ECSSystem
         a = bag.Sum();
         a += biasComponents[entity].X;
 
-        return 1.0f / (1.0f + (float)Math.Exp(-a / sigmoidComponents[entity].X));
+        return(float)Math.Tanh(a / sigmoidComponents[entity].X);
     }
 
     private float LastNeuronSynapsis(uint entity, int neuron, float[] inputs)
     {
-    
-        
         var bag = new ConcurrentBag<float>();
         float a = 0;
         int exclusive = outputsLayerComponents[entity].layer.weights.GetLength(1);
@@ -117,7 +119,7 @@ public class BrainSystem : ECSSystem
         a = bag.Sum();
         a += biasComponents[entity].X;
 
-        return 1.0f / (1.0f + (float)Math.Exp(-a / sigmoidComponents[entity].X));
+        return(float)Math.Tanh(a / sigmoidComponents[entity].X);
     }
 
     private float FirstNeuronSynapsis(uint entity, int neuron, float[] inputs)
@@ -132,6 +134,8 @@ public class BrainSystem : ECSSystem
         a = bag.Sum();
         a += biasComponents[entity].X;
 
+
+        return(float)Math.Tanh(a / sigmoidComponents[entity].X);
         return 1.0f / (1.0f + (float)Math.Exp(-a / sigmoidComponents[entity].X));
     }
 

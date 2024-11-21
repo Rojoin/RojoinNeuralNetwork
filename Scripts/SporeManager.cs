@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-
 using Random = System.Random;
 using Vector2 = System.Numerics.Vector2;
 
@@ -9,8 +8,7 @@ namespace RojoinNeuralNetwork
     [System.Serializable]
     public class SporeManager
     {
-        
-       public int generation = 0;
+        public int generation = 0;
 
         public int hervivoreCount = 30;
         public int carnivoreCount = 20;
@@ -48,9 +46,9 @@ namespace RojoinNeuralNetwork
         public GeneticAlgorithmData HMoveB;
         public GeneticAlgorithmData CMainB;
         public GeneticAlgorithmData CEatB;
-         public GeneticAlgorithmData CMoveB;
-         public GeneticAlgorithmData SMainB;
-         public GeneticAlgorithmData SFlockB;
+        public GeneticAlgorithmData CMoveB;
+        public GeneticAlgorithmData SMainB;
+        public GeneticAlgorithmData SFlockB;
 
         public string fileToLoad;
         public string filepath;
@@ -94,11 +92,10 @@ namespace RojoinNeuralNetwork
             entities = new Dictionary<uint, Brain>();
             InitEntities();
             CreateNewGeneration();
-            // SaveSystem.instance._saveSystem.AddObjectToSave(this);
 
         }
 
-        public void Tick(float deltaTime)
+        public virtual void Tick(float deltaTime)
         {
             if (!isActive)
                 return;
@@ -254,7 +251,7 @@ namespace RojoinNeuralNetwork
             ECSManager.AddComponent<HiddenLayerComponent>(entityID, new HiddenLayerComponent(brain.GetHiddenLayers()));
             ECSManager.AddComponent<OutputLayerComponent>(entityID, new OutputLayerComponent(brain.GetOutputLayer()));
             ECSManager.AddComponent<OutputComponent>(entityID, new OutputComponent(brain.outputs));
-            ECSManager.AddComponent<InputComponent>(entityID, new InputComponent(brain.inputs));
+            ECSManager.AddComponent<InputComponent>(entityID, new InputComponent(brain.inputs,brain.InputsCount));
             entities.Add(entityID, brain);
         }
 
@@ -469,7 +466,9 @@ namespace RojoinNeuralNetwork
                 ECSManager.GetComponent<BiasComponent>(entity.Key).X = entity.Value.bias;
                 ECSManager.GetComponent<SigmoidComponent>(entity.Key).X = entity.Value.p;
                 ECSManager.GetComponent<InputLayerComponent>(entity.Key).layer = entity.Value.GetInputLayer();
-                ECSManager.GetComponent<HiddenLayerComponent>(entity.Key).hiddenLayers = entity.Value.GetHiddenLayers();
+                HiddenLayerComponent hiddenLayerComponent = ECSManager.GetComponent<HiddenLayerComponent>(entity.Key);
+                hiddenLayerComponent.hiddenLayers = entity.Value.GetHiddenLayers();
+                hiddenLayerComponent.SetHighestLayerSize();
                 ECSManager.GetComponent<OutputLayerComponent>(entity.Key).layer = entity.Value.GetOutputLayer();
                 ECSManager.GetComponent<OutputComponent>(entity.Key).outputs = entity.Value.outputs;
                 ECSManager.GetComponent<InputComponent>(entity.Key).inputs = entity.Value.inputs;
@@ -494,7 +493,7 @@ namespace RojoinNeuralNetwork
             return nearest;
         }
 
-        public Plant GetNearPlant(Vector2 position)
+        public virtual Plant GetNearPlant(Vector2 position)
         {
             Plant nearest = plants[0];
             float distance = (position.X * nearest.position.X) + (position.Y * nearest.position.Y);
