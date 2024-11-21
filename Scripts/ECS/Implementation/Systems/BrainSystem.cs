@@ -45,10 +45,9 @@ public class BrainSystem : ECSSystem
     {
         Parallel.ForEach(queriedEntities, parallelOptions, entity =>
         {
-            float[] inputs = inputComponents[entity].inputs;
-            outputsComponents[entity].outputs = new float[inputs.Length];
+            outputsComponents[entity].outputs = new float[inputComponents[entity].inputs.Length];
 
-            outputsComponents[entity].outputs = FirstLayerSynapsis(entity, inputs);
+            outputsComponents[entity].outputs = FirstLayerSynapsis(entity, inputComponents[entity].inputs);
             inputComponents[entity].inputs = outputsComponents[entity].outputs;
 
             for (int layer = 0; layer < hiddenLayerComponents[entity].hiddenLayers.Length; layer++)
@@ -88,14 +87,13 @@ public class BrainSystem : ECSSystem
 
     private float NeuronSynapsis(uint entity, int neuron, float[] inputs, int layer)
     {
-        var weights = hiddenLayerComponents[entity].hiddenLayers[layer].weights;
 
         var bag = new ConcurrentBag<float>();
         float a = 0;
-        Parallel.For(0, weights.GetLength(1),parallelOptions, 
+        Parallel.For(0, hiddenLayerComponents[entity].hiddenLayers[layer].weights.GetLength(1),parallelOptions, 
             k =>
             {
-                bag.Add(weights[neuron, k] * inputs[k]);
+                bag.Add(hiddenLayerComponents[entity].hiddenLayers[layer].weights[neuron, k] * inputs[k]);
             });
         a = bag.Sum();
         a += biasComponents[entity].X;
@@ -105,14 +103,15 @@ public class BrainSystem : ECSSystem
 
     private float LastNeuronSynapsis(uint entity, int neuron, float[] inputs)
     {
-        var weights = outputsLayerComponents[entity].layer.weights;
+    
         
         var bag = new ConcurrentBag<float>();
         float a = 0;
-        Parallel.For(0, weights.GetLength(1),parallelOptions, 
+        int exclusive = outputsLayerComponents[entity].layer.weights.GetLength(1);
+        Parallel.For(0,  exclusive,parallelOptions, 
             k =>
             {
-                bag.Add(weights[neuron, k] * inputs[k]
+                bag.Add( outputsLayerComponents[entity].layer.weights[neuron, k] * inputs[k]
                 );
             });
         a = bag.Sum();
