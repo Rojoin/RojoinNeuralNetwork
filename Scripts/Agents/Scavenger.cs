@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace RojoinNeuralNetwork
+namespace RojoinNeuralNetwork.Scripts.Agents
 {
     public enum ScavengerStates
     {

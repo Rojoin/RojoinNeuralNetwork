@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Vector2 = System.Numerics.Vector2;
-namespace RojoinNeuralNetwork
+
+namespace RojoinNeuralNetwork.Scripts.Agents
 {
     public enum HeribovoreStates
     {
@@ -78,17 +79,17 @@ namespace RojoinNeuralNetwork
                     {
                         onMove.Invoke(dir);
                         position += dir;
-                        
+
                         if (position.X > gridSizeX)
                         {
-                            position.X = gridSizeX; 
+                            position.X = gridSizeX;
                         }
                         else if (position.X < 0)
                         {
-                            position.X = 0; 
+                            position.X = 0;
                         }
 
-                        if (position.Y >gridSizeY)
+                        if (position.Y > gridSizeY)
                         {
                             position.Y = gridSizeY;
                         }
@@ -96,7 +97,6 @@ namespace RojoinNeuralNetwork
                         {
                             position.Y = 0;
                         }
-         
                     }
 
                     List<Vector2> newPositions = new List<Vector2>();
@@ -266,14 +266,14 @@ namespace RojoinNeuralNetwork
                         position += dir;
                         if (position.X > gridSizeX)
                         {
-                            position.X = gridSizeX; 
+                            position.X = gridSizeX;
                         }
                         else if (position.X < 0)
                         {
-                            position.X = 0; 
+                            position.X = 0;
                         }
 
-                        if (position.Y >gridSizeY)
+                        if (position.Y > gridSizeY)
                         {
                             position.Y = gridSizeY;
                         }
@@ -281,7 +281,6 @@ namespace RojoinNeuralNetwork
                         {
                             position.Y = 0;
                         }
-
                     }
 
                     float distanceFromEnemies = GetDistanceFrom(nearEnemyPositions);
@@ -396,7 +395,10 @@ namespace RojoinNeuralNetwork
                 onTickParametes: () =>
                 {
                     return new object[]
-                        { moveBrain.outputs, position, GetNearestFoodPosition(), onMove, GetNearestFood(), populationManager.gridSizeX, populationManager.gridSizeY };
+                    {
+                        moveBrain.outputs, position, GetNearestFoodPosition(), onMove, GetNearestFood(),
+                        populationManager.gridSizeX, populationManager.gridSizeY
+                    };
                 });
             fsm.AddBehaviour<HerbivoreEatState>(HeribovoreStates.Eat,
                 onEnterParametes: () => { return new object[] { eatBrain }; },
@@ -412,7 +414,11 @@ namespace RojoinNeuralNetwork
                 onEnterParametes: () => new object[] { escapeBrain },
                 onTickParametes: () =>
                 {
-                    return new object[] { escapeBrain.outputs, position, GetNearEnemiesPositions(), onMove = MoveTo ,base.populationManager.gridSizeX,populationManager.gridSizeY};
+                    return new object[]
+                    {
+                        escapeBrain.outputs, position, GetNearEnemiesPositions(), onMove = MoveTo,
+                        base.populationManager.gridSizeX, populationManager.gridSizeY
+                    };
                 }
             );
             fsm.AddBehaviour<HerbivoreDeadState>(HeribovoreStates.Dead,
@@ -457,7 +463,6 @@ namespace RojoinNeuralNetwork
                 default:
                     break;
             }
-
         }
 
         public override void PreUpdate(float deltaTime)
@@ -493,14 +498,14 @@ namespace RojoinNeuralNetwork
             position += dir;
             if (position.X > populationManager.gridSizeX)
             {
-                position.X = populationManager.gridSizeX; 
+                position.X = populationManager.gridSizeX;
             }
             else if (position.X < 0)
             {
-                position.X = 0; 
+                position.X = 0;
             }
 
-            if (position.Y >populationManager.gridSizeY)
+            if (position.Y > populationManager.gridSizeY)
             {
                 position.Y = populationManager.gridSizeY;
             }
@@ -515,8 +520,9 @@ namespace RojoinNeuralNetwork
             mainBrain.FitnessMultiplier = 1.0f;
             mainBrain.FitnessReward = 0f;
             mainBrain.FitnessReward += eatBrain.FitnessReward + moveBrain.FitnessReward + escapeBrain.FitnessReward;
-            mainBrain.FitnessMultiplier += eatBrain.FitnessMultiplier + moveBrain.FitnessMultiplier + escapeBrain.FitnessMultiplier;
-            
+            mainBrain.FitnessMultiplier += eatBrain.FitnessMultiplier + moveBrain.FitnessMultiplier +
+                                           escapeBrain.FitnessMultiplier;
+
             mainBrain.ApplyFitness();
         }
 
@@ -544,8 +550,8 @@ namespace RojoinNeuralNetwork
             moveBrain.FitnessReward = 0f;
             escapeBrain.FitnessMultiplier = 1.0f;
             escapeBrain.FitnessReward = 0f;
-            
-            
+
+
             lives = 3;
             currentFood = 0;
             hasEatenFood = false;

@@ -11,6 +11,12 @@
       <Folder Include="Scripts\ECS\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Reference Include="RojoinSaveSystem">
+        <HintPath>Lib\RojoinSaveSystem.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
       <Exec Command="xcopy &quot;$(TargetDir)$(TargetName).dll&quot; &quot;$(ProjectDir)..\UnityProject\Assets\Lib\&quot; /F /R /Y /I" />
     </Target>
