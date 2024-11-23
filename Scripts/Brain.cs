@@ -205,9 +205,9 @@ public class Brain
     {
         int id = layers[0].neurons.Length;
         float[,] weights = new float[layers[0].neurons.Length, layers[0].neurons[0].WeightsCount];
-        for (var index = 0; index < layers[0].neurons.Length; index++)
+        for (int index = 0; index < layers[0].neurons.Length; index++)
         {
-            for (var j = 0; j < layers[0].neurons[index].WeightsCount; j++)
+            for (int j = 0; j < layers[0].neurons[index].WeightsCount; j++)
             {
                 weights[index, j] = layers[0].neurons[index].GetWeights()[j];
             }
@@ -222,9 +222,9 @@ public class Brain
         Index layerIndex = ^1;
         int id = layers[layerIndex].neurons.Length;
         float[,] weights = new float[layers[layerIndex].neurons.Length, layers[layerIndex].neurons[0].WeightsCount];
-        for (var index = 0; index < layers[layerIndex].neurons.Length; index++)
+        for (int index = 0; index < layers[layerIndex].neurons.Length; index++)
         {
-            for (var j = 0; j < layers[layerIndex].neurons[index].WeightsCount; j++)
+            for (int j = 0; j < layers[layerIndex].neurons[index].WeightsCount; j++)
             {
                 weights[index, j] = layers[layerIndex].neurons[index].GetWeights()[j];
             }
@@ -237,8 +237,9 @@ public class Brain
     public Layer[] GetHiddenLayers()
     {
         Layer[] layersToReturn = new Layer[layers.Count - 2 > 0 ? layers.Count - 2 : 0];
-        var count = 0;
-        for (var k = 0; k < this.layers.Count; k++)
+        int count = 0;
+
+        for (int k = 0; k < this.layers.Count; k++)
         {
             if (k == 0 || k == this.layers.Count - 1)
             {
@@ -247,9 +248,9 @@ public class Brain
 
             int id = layers[k].neurons.Length;
             float[,] weights = new float[layers[k].neurons.Length, layers[k].neurons[0].WeightsCount];
-            for (var index = 0; index < layers[k].neurons.Length; index++)
+            for (int index = 0; index < layers[k].neurons.Length; index++)
             {
-                for (var j = 0; j < layers[k].neurons[index].WeightsCount; j++)
+                for (int j = 0; j < layers[k].neurons[index].WeightsCount; j++)
                 {
                     weights[index, j] = layers[k].neurons[index].GetWeights()[j];
                 }
