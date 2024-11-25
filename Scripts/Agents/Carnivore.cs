@@ -168,7 +168,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         public bool hasEatenEnoughFood = false;
 
 
-        public Carnivore(SporeManager populationManager, Brain main, Brain move, Brain eat) : base(populationManager,
+        public Carnivore(IManager populationManagerLib, Brain main, Brain move, Brain eat) : base(populationManagerLib,
             main)
         {
             moveBrain = move;
@@ -250,33 +250,33 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public Vector2 GetNearFoodPos()
         {
-            return populationManager.GetNearHerbivore(position).position;
+            return PopulationManagerLib.GetNearHerbivore(position).position;
         }
 
         public Herbivore GetNearHerbivore()
         {
-            return populationManager.GetNearHerbivore(position);
+            return PopulationManagerLib.GetNearHerbivore(position);
         }
 
         public override void MoveTo(Vector2 dir)
         {
             position += dir;
-            if (position.X > populationManager.gridSizeX)
-            {
-                position.X = populationManager.gridSizeX;
-            }
-            else if (position.X < 0)
+            if (position.X > PopulationManagerLib.GetGridX())
             {
                 position.X = 0;
             }
-
-            if (position.Y > populationManager.gridSizeY)
+            else if (position.X < 0)
             {
-                position.Y = populationManager.gridSizeY;
+                position.X = PopulationManagerLib.GetGridX();
+            }
+
+            if (position.Y > PopulationManagerLib.GetGridY())
+            {
+                position.Y = 0;
             }
             else if (position.Y < 0)
             {
-                position.Y = 0;
+                position.Y = PopulationManagerLib.GetGridY();
             }
         }
 

@@ -1,53 +1,108 @@
 ﻿using System;
 using System.Collections.Generic;
-
-
-[Serializable]
-public class Genome
-{
-    public float[] genome;
-    public float fitness = 0;
-
-    public Genome(float[] genes)
-    {
-        this.genome = genes;
-        fitness = 0;
-    }
-
-    public Genome(int genesCount)
-    {
-        genome = new float[genesCount];
-        Random rand = new Random();
-        for (int j = 0; j < genesCount; j++)
-            genome[j] = (float)(rand.NextDouble() * 2 - 1);
-
-        fitness = 0;
-    }
-
-    public Genome()
-    {
-        fitness = 0;
-    }
-}
+using RojoinSaveSystem.Attributes;
 
 [Serializable]
-public class GeneticAlgorithmData
+public class GeneticAlgorithmData 
 {
-   
     public float totalFitness = 0;
     public int eliteCount = 0;
     public float mutationChance = 0.0f;
     public float mutationRate = 0.0f;
-  public Brain brainStructure;
     public readonly int maxStalledGenerationsUntilEvolve = 5;
-    public int generationStalled = 0;
-   public Genome[] lastGenome;
-    public int generationCount = 0;
+    [SaveValue(0)] public Brain brainStructure;
+    [SaveValue(1)] public Genome[] lastGenome = Array.Empty<Genome>();
+    [SaveValue(2)] public int generationStalled = 0;
+    [SaveValue(3)] public int generationCount = 0;
+
     public GeneticAlgorithmData()
     {
         eliteCount = 5;
-        float mutationChance = 0.2f;
-        float mutationRate = 0.4f;
+        mutationChance = 0.2f;
+        mutationRate = 0.4f;
+    }
+
+    public GeneticAlgorithmData(byte[] data, ref  int offset)
+    {
+        eliteCount = BitConverter.ToInt32(data, offset);
+        offset += sizeof(int);
+        
+        mutationChance = BitConverter.ToSingle(data, offset);
+        offset += sizeof(float);
+
+        mutationRate = BitConverter.ToSingle(data, offset);
+        offset += sizeof(float);
+        
+        brainStructure = new Brain(data, ref offset);
+        
+        lastGenome = CreateGenomeArray(data, ref offset);
+        
+        generationStalled = BitConverter.ToInt32(data, offset);
+        offset += sizeof(int);
+        
+        generationCount = BitConverter.ToInt32(data, offset);
+        offset += sizeof(int);
+    }
+
+    public byte[] Serialize()
+    {
+        List<byte> bytes = new List<byte>();
+        
+        bytes.AddRange(BitConverter.GetBytes(eliteCount));
+
+        // Serialize mutationChance (4 bytes for a float)
+        bytes.AddRange(BitConverter.GetBytes(mutationChance));
+
+        // Serialize mutationRate (4 bytes for a float)
+        bytes.AddRange(BitConverter.GetBytes(mutationRate));
+
+        // Serialize brainStructure
+        bytes.AddRange(brainStructure.Serialize());
+
+        // Serialize lastGenome
+        bytes.AddRange(SerializeGenomeArray(lastGenome));
+
+        // Serialize generationStalled (4 bytes for an integer)
+        bytes.AddRange(BitConverter.GetBytes(generationStalled));
+
+        // Serialize generationCount (4 bytes for an integer)
+        bytes.AddRange(BitConverter.GetBytes(generationCount));
+
+        return bytes.ToArray();
+    }
+
+    private Genome[] CreateGenomeArray(byte[] data, ref int currentOffset)
+    {
+
+        int arrayLength = BitConverter.ToInt32(data, currentOffset);
+        currentOffset += sizeof(int);
+
+
+        Genome[] genomes = new Genome[arrayLength];
+
+
+        for (int i = 0; i < arrayLength; i++)
+        {
+            genomes[i] = new Genome(data, ref currentOffset);
+        }
+
+        return genomes;
+    }
+
+    private byte[] SerializeGenomeArray(Genome[] genomes)
+    {
+        List<byte> bytes = new List<byte>();
+
+        // Serialize the array length (4 bytes for an integer)
+        bytes.AddRange(BitConverter.GetBytes(genomes.Length));
+
+        // Serialize each Genome
+        foreach (var genome in genomes)
+        {
+            bytes.AddRange(genome.Serialize());
+        }
+
+        return bytes.ToArray();
     }
     public GeneticAlgorithmData(int eliteCount, float mutationChance, float mutationRate, Brain brain,
         int maxStalledGenerationsUntilEvolve = 5)
@@ -61,7 +116,6 @@ public class GeneticAlgorithmData
 
     public GeneticAlgorithmData(GeneticAlgorithmData data)
     {
-        
         this.eliteCount = data.eliteCount;
         this.mutationChance = data.mutationChance;
         this.mutationRate = data.mutationRate;
@@ -69,13 +123,49 @@ public class GeneticAlgorithmData
         this.maxStalledGenerationsUntilEvolve = data.maxStalledGenerationsUntilEvolve;
     }
 
+
+    // public void Save(string filePath)
+    // {
+    //     Dictionary<string, object?> saveData = SaveSystem.SerializeObject(this);
+    //     string json = JsonConvert.SerializeObject(saveData, Formatting.Indented);
+    //     File.WriteAllText(filePath, json);
+    // }
+    //
+    // public void Load(string filePath)
+    // {
+    //     if (!File.Exists(filePath))
+    //         throw new FileNotFoundException("Save file not found.");
+    //
+    //     string json = File.ReadAllText(filePath);
+    //     Dictionary<string, object?> saveData = JsonConvert.DeserializeObject<Dictionary<string, object?>>(json);
+    //     
+    //     if (saveData != null)
+    //     {
+    //         SaveSystem.DeserializeObject(this, saveData);
+    //     }
+    //     else
+    //     {
+    //         throw new FileNotFoundException("Save data was null.");
+    //     }
+    // }
     
+
+    public void Save()
+    {
+
+    }
+
+    public void Load()
+    {
+
+    }
 }
 
 [Serializable]
 public static class GeneticAlgorithm
 {
     private static Random random = new Random();
+
     enum EvolutionType
     {
         None = 0,
@@ -107,6 +197,7 @@ public static class GeneticAlgorithm
     {
         return (float)(random.NextDouble() * (max - min) + min);
     }
+
     public static Genome[] Epoch(Genome[] oldGenomes, GeneticAlgorithmData data, bool forceEvolve = false)
     {
         float currentTotalFitness = 0;
@@ -146,7 +237,7 @@ public static class GeneticAlgorithm
         CalculateNeuronsToAdd(data.brainStructure);
 
 
-         SelectElite(evolutionType, data.eliteCount);
+        SelectElite(evolutionType, data.eliteCount);
         while (newPopulation.Count < population.Count)
         {
             Crossover(data, evolutionType);
@@ -169,7 +260,8 @@ public static class GeneticAlgorithm
 
         data.mutationChance = backUpData.mutationChance;
         data.mutationRate = backUpData.mutationRate;
-        return newPopulation.ToArray();
+        data.lastGenome = newPopulation.ToArray();
+        return data.lastGenome;
     }
 
     private static void CalculateNeuronsToAdd(Brain brain)
@@ -179,7 +271,7 @@ public static class GeneticAlgorithm
         randomLayer = random.Next(1, brain.layers.Count - 1);
         neuronLayers = brain.layers;
     }
-    
+
 
     static void SelectElite(EvolutionType evolutionType, int eliteCount)
     {
@@ -190,7 +282,7 @@ public static class GeneticAlgorithm
                 case EvolutionType.None:
                     break;
                 case EvolutionType.AddNeurons:
-                     EvolveChildNeurons(population[i]);
+                    EvolveChildNeurons(population[i]);
                     break;
                 case EvolutionType.AddLayer:
                     EvolveChildLayer(population[i]);
@@ -261,8 +353,8 @@ public static class GeneticAlgorithm
             case EvolutionType.None:
                 break;
             case EvolutionType.AddNeurons:
-               EvolveChildNeurons(child1);
-               EvolveChildNeurons(child2);
+                EvolveChildNeurons(child1);
+                EvolveChildNeurons(child2);
                 break;
             case EvolutionType.AddLayer:
                 EvolveChildLayer(child1);

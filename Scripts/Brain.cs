@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using RojoinSaveSystem.Attributes;
 
 [Serializable]
 public class Brain 
 {
 
-    public List<NeuronLayer> layers = new List<NeuronLayer>();
+    [SaveValue(0)] public List<NeuronLayer> layers = new List<NeuronLayer>();
     int totalWeightsCount = 0;
     int inputsCount = 0;
     private float fitness = 1;
@@ -14,8 +15,8 @@ public class Brain
     public float[] outputs;
     int fitnessCount = 0;
 
-    public float bias = 1;
-    public float p = 0.5f;
+    [SaveValue(1)]   public float bias = 1;
+    [SaveValue(2)]  public float p = 0.5f;
     public float[] inputs;
 
     public int InputsCount
@@ -25,6 +26,56 @@ public class Brain
 
     public Brain()
     {
+        
+    }
+     public Brain(byte[] data, ref int currentOffset)
+    {
+        layers = CreateLayersFromBytes(data, ref currentOffset);
+        bias = BitConverter.ToSingle(data, currentOffset);
+        currentOffset += sizeof(float);
+        p = BitConverter.ToSingle(data, currentOffset);
+        currentOffset += sizeof(float);
+    }
+    public byte[] Serialize()
+    {
+        List<byte> bytes = new List<byte>();
+
+        bytes.AddRange(SerializeLayers());
+        
+        bytes.AddRange(BitConverter.GetBytes(bias));
+        
+        bytes.AddRange(BitConverter.GetBytes(p));
+
+        return bytes.ToArray();
+    }
+
+    private byte[] SerializeLayers()
+    {
+        List<byte> bytes = new List<byte>();
+
+
+        bytes.AddRange(BitConverter.GetBytes(layers.Count));
+
+
+        foreach (var layer in layers)
+        {
+            bytes.AddRange(layer.Serialize());
+        }
+
+        return bytes.ToArray();
+    }
+    public List<NeuronLayer> CreateLayersFromBytes(byte[] data,ref int offset)
+    {
+        int layerCount = BitConverter.ToInt32(data, offset);
+        offset += sizeof(int);
+        
+        List<NeuronLayer> layersToAdd = new List<NeuronLayer>();
+        
+        for (int i = 0; i < layerCount; i++)
+        {
+            layersToAdd.Add(new NeuronLayer(data, ref offset));
+        }
+        return layersToAdd;
     }
 
     public Brain(Brain brain)

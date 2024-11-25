@@ -1,19 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using RojoinNeuralNetwork.Save;
 using RojoinNeuralNetwork.Scripts.Agents;
+using RojoinSaveSystem;
+using RojoinSaveSystem.Attributes;
 using Random = System.Random;
+using SaveSystem = RojoinNeuralNetwork.Save.SaveSystem;
 using Vector2 = System.Numerics.Vector2;
 
 namespace RojoinNeuralNetwork
 {
     [System.Serializable]
-    public class SporeManager
+    public class SporeManagerLib : ISaveObject, IManager
     {
-        public int generation = 0;
-
-        public int hervivoreCount = 30;
-        public int carnivoreCount = 20;
-        public int scavengerCount = 20;
+        private SaveObjectData saveObject = new SaveObjectData();
+        [SaveValue(0)] public int generation = 0;
+        [SaveValue(1)] public int hervivoreCount = 30;
+        [SaveValue(2)] public int carnivoreCount = 20;
+        [SaveValue(3)] public int scavengerCount = 20;
         public int gridSizeX = 10;
         public int gridSizeY = 10;
 
@@ -23,6 +27,7 @@ namespace RojoinNeuralNetwork
         public int turnCount = 100;
         private int currentTurn = 0;
 
+        private Dictionary<Vector2, Plant> plantPositions = new Dictionary<Vector2, Plant>();
         public List<Herbivore> herbis = new List<Herbivore>();
         public List<Plant> plants = new List<Plant>();
         public List<Carnivore> carnivores = new List<Carnivore>();
@@ -41,29 +46,31 @@ namespace RojoinNeuralNetwork
         List<BrainData> carnivoreBrainData;
         List<BrainData> scavBrainData;
 
-        public GeneticAlgorithmData HMainB;
-        public GeneticAlgorithmData HEatB;
-        public GeneticAlgorithmData HEscapeB;
-        public GeneticAlgorithmData HMoveB;
-        public GeneticAlgorithmData CMainB;
-        public GeneticAlgorithmData CEatB;
-        public GeneticAlgorithmData CMoveB;
-        public GeneticAlgorithmData SMainB;
-        public GeneticAlgorithmData SFlockB;
+        [SaveValue(4)] public GeneticAlgorithmData HMainB = new GeneticAlgorithmData();
+        [SaveValue(5)] public GeneticAlgorithmData HEatB = new GeneticAlgorithmData();
+        [SaveValue(6)] public GeneticAlgorithmData HEscapeB = new GeneticAlgorithmData();
+        [SaveValue(7)] public GeneticAlgorithmData HMoveB = new GeneticAlgorithmData();
+        [SaveValue(8)] public GeneticAlgorithmData CMainB = new GeneticAlgorithmData();
+        [SaveValue(9)] public GeneticAlgorithmData CEatB = new GeneticAlgorithmData();
+        [SaveValue(10)] public GeneticAlgorithmData CMoveB = new GeneticAlgorithmData();
+        [SaveValue(11)] public GeneticAlgorithmData SMainB = new GeneticAlgorithmData();
+        [SaveValue(12)] public GeneticAlgorithmData SFlockB = new GeneticAlgorithmData();
 
         public string fileToLoad;
         public string filepath;
-        private string filetype = "spore";
+
         public List<GeneticAlgorithmData> data = new List<GeneticAlgorithmData>();
+        Random random = new Random();
 
         public bool isActive;
         private Dictionary<uint, Brain> entities;
+        private SaveSystem.GeneticAlgorithmDataManager manager = new SaveSystem.GeneticAlgorithmDataManager();
 
-        public SporeManager()
+        public SporeManagerLib()
         {
         }
 
-        public SporeManager(List<BrainData> herbBrainData, List<BrainData> carnivoreBrainData,
+        public SporeManagerLib(List<BrainData> herbBrainData, List<BrainData> carnivoreBrainData,
             List<BrainData> scavBrainData, int gridSizeX, int gridSizeY, int hervivoreCount, int carnivoreCount,
             int scavengerCount, int turnCount)
         {
@@ -77,7 +84,7 @@ namespace RojoinNeuralNetwork
             this.carnivoreCount = carnivoreCount;
             this.scavengerCount = scavengerCount;
 
-        
+
             const int SCAV_BRAINS = 2;
             const int CARN_BRAINS = 3;
             const int HERB_BRAINS = 4;
@@ -93,7 +100,6 @@ namespace RojoinNeuralNetwork
             entities = new Dictionary<uint, Brain>();
             InitEntities();
             CreateNewGeneration();
-
         }
 
         public virtual void Tick(float deltaTime)
@@ -118,6 +124,13 @@ namespace RojoinNeuralNetwork
         private void CreateNewGeneration()
         {
             generation++;
+            ResetPositions();
+
+            currentTurn = 0;
+        }
+
+        private void ResetPositions()
+        {
             foreach (var herb in herbis)
             {
                 herb.Reset(GetRandomHerbPosition());
@@ -133,17 +146,15 @@ namespace RojoinNeuralNetwork
                 scav.Reset(GetRandomScavPosition());
             }
 
+            plantPositions.Clear();
             foreach (var plant in plants)
             {
-                plant.Reset(GetRandomScavPosition());
+                plant.Reset(GetRandomPlantPosition(plant));
             }
-
-            currentTurn = 0;
         }
 
         private Vector2 GetRandomHerbPosition()
         {
-            Random random = new Random();
             float randomX = random.Next(0, gridSizeX);
             float randomY = random.Next(0, gridSizeY / 2);
             return new Vector2(randomX, randomY);
@@ -151,7 +162,6 @@ namespace RojoinNeuralNetwork
 
         private Vector2 GetRandomCarnivorePosition()
         {
-            Random random = new Random();
             float randomX = random.Next(0, gridSizeX);
             float randomY = random.Next(gridSizeY / 2, gridSizeY);
             return new Vector2(randomX, randomY);
@@ -159,10 +169,29 @@ namespace RojoinNeuralNetwork
 
         private Vector2 GetRandomScavPosition()
         {
-            Random random = new Random();
             float randomX = random.Next(0, gridSizeX);
             float randomY = random.Next(0, gridSizeY);
             return new Vector2(randomX, randomY);
+        }
+
+        private Vector2 GetRandomPlantPosition(Plant plant)
+        {
+            float randomX = random.Next(0, gridSizeX);
+            float randomY = random.Next(0, gridSizeY);
+
+            Vector2 randomPlantPosition = new Vector2(randomX, randomY);
+            while (plantPositions.ContainsKey(randomPlantPosition))
+            {
+                randomX = random.Next(0, gridSizeX);
+                randomY = random.Next(0, gridSizeY);
+
+                randomPlantPosition.X = randomX;
+                randomPlantPosition.Y = randomY;
+            }
+
+            plantPositions.Add(randomPlantPosition, plant);
+
+            return randomPlantPosition;
         }
 
         private void InitEntities()
@@ -228,6 +257,7 @@ namespace RojoinNeuralNetwork
             CMoveB = new GeneticAlgorithmData(EliteCount, MutationChance, MutationRate, carnMoveBrains[0]);
             SMainB = new GeneticAlgorithmData(EliteCount, MutationChance, MutationRate, scavMainBrains[0]);
             SFlockB = new GeneticAlgorithmData(EliteCount, MutationChance, MutationRate, scavFlokingBrains[0]);
+
             data.Add(HMainB);
             data.Add(HEatB);
             data.Add(HEscapeB);
@@ -237,6 +267,12 @@ namespace RojoinNeuralNetwork
             data.Add(CMoveB);
             data.Add(SMainB);
             data.Add(SFlockB);
+
+            foreach (GeneticAlgorithmData algorithmData in data)
+            {
+                manager.AddDataset(algorithmData);
+            }
+
             for (int i = 0; i < hervivoreCount * 2; i++)
             {
                 plants.Add(new Plant());
@@ -252,7 +288,7 @@ namespace RojoinNeuralNetwork
             ECSManager.AddComponent<HiddenLayerComponent>(entityID, new HiddenLayerComponent(brain.GetHiddenLayers()));
             ECSManager.AddComponent<OutputLayerComponent>(entityID, new OutputLayerComponent(brain.GetOutputLayer()));
             ECSManager.AddComponent<OutputComponent>(entityID, new OutputComponent(brain.outputs));
-            ECSManager.AddComponent<InputComponent>(entityID, new InputComponent(brain.inputs,brain.InputsCount));
+            ECSManager.AddComponent<InputComponent>(entityID, new InputComponent(brain.inputs, brain.InputsCount));
             entities.Add(entityID, brain);
         }
 
@@ -264,12 +300,13 @@ namespace RojoinNeuralNetwork
             {
                 geneticAlgorithmData.generationCount = generation;
             }
+
             EpochHerbivore();
             EpochCarnivore();
             EpochScavenger();
 
-            string file = $"{filepath}{generation}.{filetype}";
-            GeneticAlgorithmDataBatchHandler.SaveBatch(data, file);
+            string file = $"{filepath}{generation}.json";
+            manager.SaveAll(file);
             foreach (KeyValuePair<uint, Brain> entity in entities)
             {
                 HiddenLayerComponent inputComponent = ECSManager.GetComponent<HiddenLayerComponent>(entity.Key);
@@ -353,15 +390,36 @@ namespace RojoinNeuralNetwork
             info.lastGenome = newGenomes;
             for (int i = 0; i < brains.Count; i++)
             {
-                // Brain brain =;
                 brains[i] = new Brain(info.brainStructure);
-                // brain.CopyStructureFrom(info.brainStructure);
                 brains[i].SetWeights(newGenomes[i].genome);
             }
         }
 
         private void RestoreSave()
         {
+            List<GeneticAlgorithmData> dataToPaste = manager.GetAllDatasets();
+            
+            HMainB = dataToPaste[0];
+            HEatB = dataToPaste[1];
+            HEscapeB = dataToPaste[2];
+            HMoveB = dataToPaste[3];
+            CMainB = dataToPaste[4];
+            CEatB = dataToPaste[5];
+            CMoveB = dataToPaste[6];
+            SMainB = dataToPaste[7];
+            SFlockB = dataToPaste[8];
+            manager.ClearDatasets();
+            manager.AddDataset(HMainB);
+            manager.AddDataset(HEatB);
+            manager.AddDataset(HEscapeB);
+            manager.AddDataset(HMoveB);
+            manager.AddDataset(CMainB);
+            manager.AddDataset(CEatB);
+            manager.AddDataset(CMoveB);
+            manager.AddDataset(SMainB);
+            manager.AddDataset(SFlockB);
+            
+            
             generation = HMainB.generationCount;
             RestoreBrainsData(herbMainBrains, HMainB);
             RestoreBrainsData(herbMoveBrains, HMoveB);
@@ -372,6 +430,8 @@ namespace RojoinNeuralNetwork
             RestoreBrainsData(carnMoveBrains, CMoveB);
             RestoreBrainsData(scavMainBrains, SMainB);
             RestoreBrainsData(scavFlokingBrains, SFlockB);
+            ResetPositions();
+            
         }
 
         private void RestoreBrainsData(List<Brain> brains, GeneticAlgorithmData info)
@@ -454,14 +514,26 @@ namespace RojoinNeuralNetwork
         #endregion
 
 
+        public int GetID()
+        {
+            return saveObject.id;
+        }
+
+        public ISaveObject GetObject()
+        {
+            return this;
+        }
+
         public void Save()
         {
+
         }
 
         public void Load()
         {
-            data = GeneticAlgorithmDataBatchHandler.LoadBatch(fileToLoad);
+            manager.LoadAll(fileToLoad);
             RestoreSave();
+            isActive = false;
             foreach (var entity in entities)
             {
                 ECSManager.GetComponent<BiasComponent>(entity.Key).X = entity.Value.bias;
@@ -474,9 +546,11 @@ namespace RojoinNeuralNetwork
                 ECSManager.GetComponent<OutputComponent>(entity.Key).outputs = entity.Value.outputs;
                 ECSManager.GetComponent<InputComponent>(entity.Key).inputs = entity.Value.inputs;
             }
+
+            currentTurn = 0;
         }
 
-        public Herbivore GetNearHerbivore(Vector2 position)
+        public virtual Herbivore GetNearHerbivore(Vector2 position)
         {
             Herbivore nearest = herbis[0];
             float distance = (position.X * nearest.position.X) + (position.Y * nearest.position.Y);
@@ -494,19 +568,29 @@ namespace RojoinNeuralNetwork
             return nearest;
         }
 
+        public int GetGridX()
+        {
+            return gridSizeX;
+        }
+
+        public int GetGridY()
+        {
+            return gridSizeY;
+        }
+
         public virtual Plant GetNearPlant(Vector2 position)
         {
             Plant nearest = plants[0];
             float distance = (position.X * nearest.position.X) + (position.Y * nearest.position.Y);
 
-            foreach (Plant go in plants)
+            foreach (var plant in plantPositions)
             {
-                if (go.isAvailable)
+                if (plant.Value.isAvailable)
                 {
-                    float newDist = (go.position.X * position.X) + (go.position.Y * position.Y);
+                    float newDist = (plant.Value.position.X * position.X) + (plant.Value.position.Y * position.Y);
                     if (newDist < distance)
                     {
-                        nearest = go;
+                        nearest = plant.Value;
                         distance = newDist;
                     }
                 }
@@ -515,14 +599,19 @@ namespace RojoinNeuralNetwork
             return nearest;
         }
 
-        public List<Scavenger> GetNearScavs(Vector2 position)
+        public List<Scavenger> GetNearScavs(Scavenger scavenger)
         {
             var nearbyScav = new List<(Scavenger scav, float distance)>();
 
             foreach (Scavenger go in scavengers)
             {
-                float distance = (position.X - go.position.X) * (position.X - go.position.X)
-                                 + (position.Y - go.position.Y) * (position.Y - go.position.Y);
+                if (go == scavenger)
+                {
+                    continue;
+                }
+
+                float distance = (scavenger.position.X - go.position.X) * (scavenger.position.X - go.position.X)
+                                 + (scavenger.position.Y - go.position.Y) * (scavenger.position.Y - go.position.Y);
                 nearbyScav.Add((go, distance));
             }
 
@@ -554,5 +643,15 @@ namespace RojoinNeuralNetwork
             carnToReturn.Add(nearCarn[2].scav.position);
             return carnToReturn;
         }
+    }
+
+    public interface IManager
+    {
+        public List<Vector2> GetNearCarnivores(Vector2 position);
+        public List<Scavenger> GetNearScavs(Scavenger scavenger);
+        public Plant GetNearPlant(Vector2 position);
+        public Herbivore GetNearHerbivore(Vector2 position);
+        public int GetGridX();
+        public int GetGridY();
     }
 }

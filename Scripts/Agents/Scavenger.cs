@@ -40,6 +40,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
             float rotation = (float)(parameters[10]);
             speed = (float)(parameters[11]);
             radius = (float)(parameters[12]);
+            float deltaTime = (float)parameters[13];
             List<Scavenger> nearScavengers = parameters[13] as List<Scavenger>;
             behaviour.AddMultiThreadBehaviour(0, () =>
             {
@@ -92,10 +93,10 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
                 finalDirection = Vector2.Normalize(finalDirection);
                 onMove.Invoke(finalDirection);
-                Vector2 finalPosition = position + finalDirection * speed;
+                 position += finalDirection * speed * deltaTime;
 
-
-                onMove.Invoke(finalPosition);
+                 //
+                // onMove.Invoke(finalPosition);
             });
 
             //fitness
@@ -184,7 +185,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
             fsm.ForceState(ScavengerStates.Move);
         }
 
-        public Scavenger(SporeManager populationManager, Brain main, Brain flockBrain) : base(populationManager, main)
+        public Scavenger(IManager populationManagerLib, Brain main, Brain flockBrain) : base(populationManagerLib, main)
         {
             flockingBrain = flockBrain;
             minEatRadius = 4f;
@@ -199,7 +200,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                     {
                         mainBrain.outputs, position, GetNearFoodPos(), minEatRadius, hasEaten, GetNearHerbivore(),
                         setDir = MoveTo, counterEating, setEatingCounter = b => counterEating = b, dir, rotation, speed,
-                        radius, GetNearScavs()
+                        radius, GetNearScavs(), deltaTime
                     };
                 });
 
@@ -212,6 +213,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public override void PreUpdate(float deltaTime)
         {
+            this.deltaTime = deltaTime;
             var nearFoodPos = GetNearFoodPos();
             mainBrain.inputs = new[] { position.X, position.Y, minEatRadius, nearFoodPos.X, nearFoodPos.Y };
        
@@ -232,22 +234,22 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         private void Move(float deltaTime)
         {
             position += dir * speed * deltaTime;
-            if (position.X > populationManager.gridSizeX)
-            {
-                position.X = populationManager.gridSizeX;
-            }
-            else if (position.X < 0)
+            if (position.X > PopulationManagerLib.GetGridX())
             {
                 position.X = 0;
             }
-
-            if (position.Y > populationManager.gridSizeY)
+            else if (position.X < 0)
             {
-                position.Y = populationManager.gridSizeY;
+                position.X = PopulationManagerLib.GetGridX();
+            }
+
+            if (position.Y > PopulationManagerLib.GetGridY())
+            {
+                position.Y = 0;
             }
             else if (position.Y < 0)
             {
-                position.Y = 0;
+                position.Y = PopulationManagerLib.GetGridY();
             }
         }
 
@@ -258,12 +260,12 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public Herbivore GetNearHerbivore()
         {
-            return populationManager.GetNearHerbivore(position);
+            return PopulationManagerLib.GetNearHerbivore(position);
         }
 
         public List<Scavenger> GetNearScavs()
         {
-            return populationManager.GetNearScavs(position);
+            return PopulationManagerLib.GetNearScavs(this);
         }
 
         public override void MoveTo(Vector2 dir)

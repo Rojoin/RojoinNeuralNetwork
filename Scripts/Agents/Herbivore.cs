@@ -266,20 +266,20 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                         position += dir;
                         if (position.X > gridSizeX)
                         {
-                            position.X = gridSizeX;
+                            position.X = 0;
                         }
                         else if (position.X < 0)
                         {
-                            position.X = 0;
+                            position.X = gridSizeX;
                         }
 
                         if (position.Y > gridSizeY)
                         {
-                            position.Y = gridSizeY;
+                            position.Y = 0;
                         }
                         else if (position.Y < 0)
                         {
-                            position.Y = 0;
+                            position.Y = gridSizeY;
                         }
                     }
 
@@ -380,8 +380,8 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         public Brain escapeBrain;
         public Brain eatBrain;
 
-        public Herbivore(SporeManager populationManager, Brain main, Brain moveBrain, Brain eatBrain, Brain escapeBrain)
-            : base(populationManager, main)
+        public Herbivore(IManager populationManagerLib, Brain main, Brain moveBrain, Brain eatBrain, Brain escapeBrain)
+            : base(populationManagerLib, main)
         {
             this.moveBrain = moveBrain;
             this.eatBrain = eatBrain;
@@ -397,7 +397,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                     return new object[]
                     {
                         moveBrain.outputs, position, GetNearestFoodPosition(), onMove, GetNearestFood(),
-                        populationManager.gridSizeX, populationManager.gridSizeY
+                        populationManagerLib.GetGridX(), populationManagerLib.GetGridY()
                     };
                 });
             fsm.AddBehaviour<HerbivoreEatState>(HeribovoreStates.Eat,
@@ -417,7 +417,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                     return new object[]
                     {
                         escapeBrain.outputs, position, GetNearEnemiesPositions(), onMove = MoveTo,
-                        base.populationManager.gridSizeX, populationManager.gridSizeY
+                        base.PopulationManagerLib.GetGridX(), populationManagerLib.GetGridY()
                     };
                 }
             );
@@ -496,22 +496,22 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         public override void MoveTo(Vector2 dir)
         {
             position += dir;
-            if (position.X > populationManager.gridSizeX)
-            {
-                position.X = populationManager.gridSizeX;
-            }
-            else if (position.X < 0)
+            if (position.X > PopulationManagerLib.GetGridX())
             {
                 position.X = 0;
             }
-
-            if (position.Y > populationManager.gridSizeY)
+            else if (position.X < 0)
             {
-                position.Y = populationManager.gridSizeY;
+                position.X = PopulationManagerLib.GetGridX();
+            }
+
+            if (position.Y > PopulationManagerLib.GetGridY())
+            {
+                position.Y = 0;
             }
             else if (position.Y < 0)
             {
-                position.Y = 0;
+                position.Y = PopulationManagerLib.GetGridY();
             }
         }
 
@@ -528,7 +528,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public List<Vector2> GetNearEnemiesPositions()
         {
-            return populationManager.GetNearCarnivores(position);
+            return PopulationManagerLib.GetNearCarnivores(position);
         }
 
         public void ReceiveDamage()
@@ -572,7 +572,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public Plant GetNearestFood()
         {
-            return populationManager.GetNearPlant(position);
+            return PopulationManagerLib.GetNearPlant(position);
         }
 
         public Vector2 GetNearestFoodPosition()

@@ -71,15 +71,15 @@ namespace RojoinNeuralNetwork
     [System.Serializable]
     public abstract class SporeAgent<AgentStates,AgentFlags>: SporeAgent where AgentStates :Enum  where AgentFlags : Enum 
     {
-        protected SporeManager populationManager;
+        protected IManager PopulationManagerLib;
         public Brain mainBrain;
-      
+        protected float deltaTime = 0;
         protected bool isActive;
         protected FSM<AgentStates, AgentFlags> fsm;
-        public SporeAgent(SporeManager populationManager, Brain main)
+        public SporeAgent(IManager populationManagerLib, Brain main)
         {
             fsm = new FSM<AgentStates, AgentFlags>();
-            this.populationManager = populationManager;
+            this.PopulationManagerLib = populationManagerLib;
             mainBrain = main;
         }
 

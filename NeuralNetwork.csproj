@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <Folder Include="Lib\" />
       <Folder Include="Scripts\ECS\" />
     </ItemGroup>
 
@@ -15,6 +16,10 @@
       <Reference Include="RojoinSaveSystem">
         <HintPath>Lib\RojoinSaveSystem.dll</HintPath>
       </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
