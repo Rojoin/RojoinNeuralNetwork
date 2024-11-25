@@ -40,8 +40,8 @@ namespace RojoinNeuralNetwork.Scripts.Agents
             float rotation = (float)(parameters[10]);
             speed = (float)(parameters[11]);
             radius = (float)(parameters[12]);
-            float deltaTime = (float)parameters[13];
             List<Scavenger> nearScavengers = parameters[13] as List<Scavenger>;
+            float deltaTime = (float)parameters[14];
             behaviour.AddMultiThreadBehaviour(0, () =>
             {
                 List<Vector2> newPositions = new List<Vector2> { nearFoodPos };
@@ -196,7 +196,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                 onEnterParametes: () => { return new object[] { mainBrain, position, minEatRadius, flockingBrain }; },
                 onTickParametes: () =>
                 {
-                    return new object[]
+                    return new object[15]
                     {
                         mainBrain.outputs, position, GetNearFoodPos(), minEatRadius, hasEaten, GetNearHerbivore(),
                         setDir = MoveTo, counterEating, setEatingCounter = b => counterEating = b, dir, rotation, speed,
