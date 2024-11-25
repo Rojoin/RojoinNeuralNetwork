@@ -58,6 +58,7 @@ namespace RojoinNeuralNetwork
 
         public string fileToLoad;
         public string filepath;
+        public string fileType;
 
         public List<GeneticAlgorithmData> data = new List<GeneticAlgorithmData>();
         Random random = new Random();
@@ -305,7 +306,7 @@ namespace RojoinNeuralNetwork
             EpochCarnivore();
             EpochScavenger();
 
-            string file = $"{filepath}{generation}.json";
+            string file = $"{filepath}{generation}.{fileType}";
             manager.SaveAll(file);
             foreach (KeyValuePair<uint, Brain> entity in entities)
             {
@@ -531,7 +532,7 @@ namespace RojoinNeuralNetwork
 
         public void Load()
         {
-            manager.LoadAll(fileToLoad);
+            manager.LoadAll($"{fileToLoad}.{fileType}");
             RestoreSave();
             isActive = false;
             foreach (var entity in entities)

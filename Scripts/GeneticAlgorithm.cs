@@ -444,6 +444,10 @@ public static class GeneticAlgorithm
 
         void CopyExistingWeights(ref int count, ref int originalWeightsCount)
         {
+            if (count >=newWeight.Length)
+            {
+                return;
+            }
             newWeight[count] = child.genome[originalWeightsCount];
             originalWeightsCount++;
             count++;
@@ -451,6 +455,10 @@ public static class GeneticAlgorithm
 
         void CreateNewWeights(ref int count)
         {
+            if (count >=newWeight.Length)
+            {
+                return;
+            }
             newWeight[count] = RandomRangeFloat(-1.0f, 1.0f);
             count++;
         }
@@ -521,6 +529,10 @@ public static class GeneticAlgorithm
 
         void CopyExistingWeights(ref int count, ref int originalWeightsCount)
         {
+            if (count >=newWeight.Length)
+            {
+                return;
+            }
             newWeight[count] = child.genome[originalWeightsCount];
             originalWeightsCount++;
             count++;
@@ -528,6 +540,10 @@ public static class GeneticAlgorithm
 
         void CreateNewWeights(ref int count)
         {
+            if (count >=newWeight.Length)
+            {
+                return;
+            }
             newWeight[count] = RandomRangeFloat(-1.0f, 1.0f);
             count++;
         }
