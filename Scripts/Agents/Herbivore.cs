@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using RojoinNeuralNetwork.Utils;
 using Vector2 = System.Numerics.Vector2;
 
 namespace RojoinNeuralNetwork.Scripts.Agents
@@ -155,19 +157,23 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                     return;
                 }
 
-                if (outputs[0] >= 0f)
+                Logger.Log($"{this.GetHashCode()}: currentpos {position}, near food pos {nearFoodPos}.");
+                Logger.Log($"{this.GetHashCode()}: output = {outputs[0]}.");
+                if (outputs[0] > 0f)
                 {
-                    if (position == nearFoodPos && !hasEatenEnoughFood)
+                    if (position == nearFoodPos)
                     {
                         if (plant.CanBeEaten())
                         {
                             plant.Eat();
                             onEaten(++counterEating);
                             brain.FitnessReward += 20;
-                            if (counterEating == maxEating)
+                            Logger.Log($"{this.GetHashCode()}: has {counterEating} eats.");
+                            if (counterEating >= maxEating)
                             {
                                 brain.FitnessReward += 30;
                                 onHasEatenEnoughFood.Invoke(true);
+                                Logger.Log($"{this.GetHashCode()}: has easten enough food.");
                             }
                             //If comi 5
                             // fitness skyrocket
@@ -201,7 +207,6 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public override BehaviourActions GetExitBehaviours(params object[] parameters)
         {
-            brain.ApplyFitness();
             return default;
         }
     }
@@ -286,6 +291,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                     float distanceFromEnemies = GetDistanceFrom(nearEnemyPositions);
                     if (distanceFromEnemies <= previousDistance)
                     {
+                        Logger.Log($"{this.GetHashCode()}: got away from enemies.");
                         brain.FitnessReward += 20;
                         brain.FitnessMultiplier += 0.05f;
                     }
@@ -372,13 +378,16 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         List<Vector2> nearFood = new List<Vector2>();
         public int lives = 3;
         private int livesUntilCountdownDissapears = 30;
-        private int maxFood = 5;
+        private int maxFood = 1;
         int currentFood = 0;
         public bool hasEatenFood = false;
         private int maxMovementPerTurn = 3;
         public Brain moveBrain;
         public Brain escapeBrain;
         public Brain eatBrain;
+        private Vector2 nearFoodPosition;
+        private Plant nearestFood;
+        private List<Vector2> nearEnemiesPositions;
 
         public Herbivore(IManager populationManagerLib, Brain main, Brain moveBrain, Brain eatBrain, Brain escapeBrain)
             : base(populationManagerLib, main)
@@ -390,13 +399,14 @@ namespace RojoinNeuralNetwork.Scripts.Agents
             Action<bool> onEatenFood;
             Action<int> onEat;
             onMove = MoveTo;
+
             fsm.AddBehaviour<HerbivoreMoveState>(HeribovoreStates.Move,
                 onEnterParametes: () => { return new object[] { moveBrain }; },
                 onTickParametes: () =>
                 {
                     return new object[]
                     {
-                        moveBrain.outputs, position, GetNearestFoodPosition(), onMove, GetNearestFood(),
+                        moveBrain.outputs, position, nearFoodPosition, onMove, nearestFood,
                         populationManagerLib.GetGridX(), populationManagerLib.GetGridY()
                     };
                 });
@@ -406,8 +416,8 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                 {
                     return new object[]
                     {
-                        eatBrain.outputs, position, GetNearestFood().position, hasEatenFood, currentFood, maxFood,
-                        onEatenFood = b => { hasEatenFood = b; }, onEat = a => currentFood = a, GetNearestFood(),
+                        eatBrain.outputs, position, nearFoodPosition, hasEatenFood, currentFood, maxFood,
+                        onEatenFood = b => { hasEatenFood = b; }, onEat = a => currentFood = a, nearestFood,
                     };
                 });
             fsm.AddBehaviour<HerbivoreEscapeState>(HeribovoreStates.Escape,
@@ -416,7 +426,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                 {
                     return new object[]
                     {
-                        escapeBrain.outputs, position, GetNearEnemiesPositions(), onMove = MoveTo,
+                        escapeBrain.outputs, position, nearEnemiesPositions, onMove = MoveTo,
                         base.PopulationManagerLib.GetGridX(), populationManagerLib.GetGridY()
                     };
                 }
@@ -450,15 +460,17 @@ namespace RojoinNeuralNetwork.Scripts.Agents
             {
                 case 0:
                     fsm.Transition(HeribovoreStates.Escape);
-
+                    Logger.Log($"{this.GetHashCode()}: change to Escape.");
                     break;
                 case 1:
                     fsm.Transition(HeribovoreStates.Move);
+                    Logger.Log($"{this.GetHashCode()}: change to Move.");
 
                     break;
                 case 2:
                     fsm.Transition(HeribovoreStates.Eat);
 
+                    Logger.Log($"{this.GetHashCode()}: change to Eat.");
                     break;
                 default:
                     break;
@@ -467,23 +479,26 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public override void PreUpdate(float deltaTime)
         {
-            List<Vector2> enemies = GetNearEnemiesPositions();
-            Vector2 nearestFoodPosition = GetNearestFoodPosition();
+            nearFoodPosition = GetNearestFoodPosition();
+            nearestFood = GetNearestFood();
+            nearEnemiesPositions = GetNearEnemiesPositions();
 
             mainBrain.inputs = new[]
             {
-                position.X, position.Y, nearestFoodPosition.X, nearestFoodPosition.Y, hasEatenFood ? 1 : -1,
-                enemies[0].X, enemies[0].Y, enemies[1].X, enemies[1].Y, enemies[2].X,
-                enemies[2].Y
+                position.X, position.Y, nearFoodPosition.X, nearFoodPosition.Y, hasEatenFood ? 1 : -1,
+                nearEnemiesPositions[0].X, nearEnemiesPositions[0].Y, nearEnemiesPositions[1].X,
+                nearEnemiesPositions[1].Y, nearEnemiesPositions[2].X,
+                nearEnemiesPositions[2].Y
             };
-            moveBrain.inputs = new[] { position.X, position.Y, nearestFoodPosition.X, nearestFoodPosition.Y };
+            moveBrain.inputs = new[] { position.X, position.Y, nearFoodPosition.X, nearFoodPosition.Y };
             eatBrain.inputs = new[]
-                { position.X, position.Y, nearestFoodPosition.X, nearestFoodPosition.Y, hasEatenFood ? 1 : -1 };
+                { position.X, position.Y, nearFoodPosition.X, nearFoodPosition.Y, hasEatenFood ? 1 : -1 };
 
             escapeBrain.inputs = new[]
             {
-                position.X, position.Y, enemies[0].X, enemies[0].Y, enemies[1].X, enemies[1].Y, enemies[2].X,
-                enemies[2].Y
+                position.X, position.Y, nearEnemiesPositions[0].X, nearEnemiesPositions[0].Y, nearEnemiesPositions[1].X,
+                nearEnemiesPositions[1].Y, nearEnemiesPositions[2].X,
+                nearEnemiesPositions[2].Y
             };
         }
 
@@ -517,6 +532,11 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public override void GiveFitnessToMain()
         {
+            escapeBrain.ApplyFitness();
+            moveBrain.ApplyFitness();
+            eatBrain.ApplyFitness();
+
+
             mainBrain.FitnessMultiplier = 1.0f;
             mainBrain.FitnessReward = 0f;
             mainBrain.FitnessReward += eatBrain.FitnessReward + moveBrain.FitnessReward + escapeBrain.FitnessReward;

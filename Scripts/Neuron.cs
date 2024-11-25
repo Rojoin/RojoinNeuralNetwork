@@ -95,6 +95,6 @@ public class Neuron
 
     public static float Sigmoid(float a, float p)
     {
-        return 1.0f / (1.0f + MathF.Exp(-a / p));
+        return (float)Math.Tanh(a / p);
     }
 }

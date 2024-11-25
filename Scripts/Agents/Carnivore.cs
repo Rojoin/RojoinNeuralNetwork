@@ -154,7 +154,6 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public override BehaviourActions GetExitBehaviours(params object[] parameters)
         {
-            brain.ApplyFitness();
             return default;
         }
     }
@@ -282,6 +281,9 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public override void GiveFitnessToMain()
         {
+            moveBrain.ApplyFitness();
+            eatBrain.ApplyFitness();
+            
             mainBrain.FitnessMultiplier = 1.0f;
             mainBrain.FitnessReward = 0f;
             mainBrain.FitnessReward = eatBrain.FitnessReward + moveBrain.FitnessReward;

@@ -275,6 +275,8 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public override void GiveFitnessToMain()
         {
+            
+            flockingBrain.ApplyFitness();
             mainBrain.FitnessMultiplier = 1.0f;
             mainBrain.FitnessReward = 0f;
             mainBrain.FitnessReward += flockingBrain.FitnessReward + (hasEaten ? flockingBrain.FitnessReward : 0);

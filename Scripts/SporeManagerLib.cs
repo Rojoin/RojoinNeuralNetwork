@@ -322,9 +322,15 @@ namespace RojoinNeuralNetwork
             int count = 0;
             foreach (var scav in scavengers)
             {
+                scav.GiveFitnessToMain();
                 if (scav.hasEaten)
                 {
                     count++;
+                }
+                else
+                {
+                    scav.mainBrain.DestroyFitness();
+                    scav.flockingBrain.DestroyFitness();
                 }
             }
 
@@ -339,6 +345,7 @@ namespace RojoinNeuralNetwork
             int count = 0;
             foreach (var carnivore in carnivores)
             {
+                carnivore.GiveFitnessToMain();
                 if (carnivore.hasEatenEnoughFood)
                 {
                     count++;
@@ -364,6 +371,7 @@ namespace RojoinNeuralNetwork
             int count = 0;
             foreach (Herbivore herbivore in herbis)
             {
+                herbivore.GiveFitnessToMain();
                 if (herbivore.lives > 0 && herbivore.hasEatenFood)
                 {
                     count++;
@@ -399,7 +407,7 @@ namespace RojoinNeuralNetwork
         private void RestoreSave()
         {
             List<GeneticAlgorithmData> dataToPaste = manager.GetAllDatasets();
-            
+
             HMainB = dataToPaste[0];
             HEatB = dataToPaste[1];
             HEscapeB = dataToPaste[2];
@@ -419,8 +427,8 @@ namespace RojoinNeuralNetwork
             manager.AddDataset(CMoveB);
             manager.AddDataset(SMainB);
             manager.AddDataset(SFlockB);
-            
-            
+
+
             generation = HMainB.generationCount;
             RestoreBrainsData(herbMainBrains, HMainB);
             RestoreBrainsData(herbMoveBrains, HMoveB);
@@ -432,7 +440,6 @@ namespace RojoinNeuralNetwork
             RestoreBrainsData(scavMainBrains, SMainB);
             RestoreBrainsData(scavFlokingBrains, SFlockB);
             ResetPositions();
-            
         }
 
         private void RestoreBrainsData(List<Brain> brains, GeneticAlgorithmData info)
@@ -527,12 +534,11 @@ namespace RojoinNeuralNetwork
 
         public void Save()
         {
-
         }
 
         public void Load()
         {
-            manager.LoadAll($"{fileToLoad}.{fileType}");
+            manager.LoadAll(fileToLoad);
             RestoreSave();
             isActive = false;
             foreach (var entity in entities)
@@ -553,12 +559,16 @@ namespace RojoinNeuralNetwork
 
         public virtual Herbivore GetNearHerbivore(Vector2 position)
         {
-            Herbivore nearest = herbis[0];
-            float distance = (position.X * nearest.position.X) + (position.Y * nearest.position.Y);
+            Herbivore nearest = null;
+            float distance = float.MaxValue;
 
             foreach (Herbivore go in herbis)
             {
-                float newDist = (go.position.X * position.X) + (go.position.Y * position.Y);
+                if (go.position == position)
+                {
+                    return go;
+                }
+                float newDist = Vector2.Distance(position, go.position);
                 if (newDist < distance)
                 {
                     nearest = go;
@@ -581,18 +591,27 @@ namespace RojoinNeuralNetwork
 
         public virtual Plant GetNearPlant(Vector2 position)
         {
-            Plant nearest = plants[0];
-            float distance = (position.X * nearest.position.X) + (position.Y * nearest.position.Y);
+            Plant nearest = null;
+
+            float shortestDistance = float.MaxValue;
+            if (plantPositions.TryGetValue(position, out Plant value))
+            {
+                if (value.isAvailable)
+                {
+                    return value;
+                }
+            }
 
             foreach (var plant in plantPositions)
             {
                 if (plant.Value.isAvailable)
                 {
-                    float newDist = (plant.Value.position.X * position.X) + (plant.Value.position.Y * position.Y);
-                    if (newDist < distance)
+                    float newDist = Vector2.Distance(position, plant.Value.position);
+
+                    if (newDist < shortestDistance)
                     {
                         nearest = plant.Value;
-                        distance = newDist;
+                        shortestDistance = newDist;
                     }
                 }
             }
@@ -610,10 +629,9 @@ namespace RojoinNeuralNetwork
                 {
                     continue;
                 }
+                float newDist = Vector2.Distance(scavenger.position, go.position);
 
-                float distance = (scavenger.position.X - go.position.X) * (scavenger.position.X - go.position.X)
-                                 + (scavenger.position.Y - go.position.Y) * (scavenger.position.Y - go.position.Y);
-                nearbyScav.Add((go, distance));
+                nearbyScav.Add((go, newDist));
             }
 
             nearbyScav.Sort((a, b) => a.distance.CompareTo(b.distance));
@@ -631,9 +649,8 @@ namespace RojoinNeuralNetwork
 
             foreach (Carnivore go in carnivores)
             {
-                float distance = (position.X - go.position.X) * (position.X - go.position.X)
-                                 + (position.Y - go.position.Y) * (position.Y - go.position.Y);
-                nearCarn.Add((go, distance));
+                float newDist = Vector2.Distance(position, go.position);
+                nearCarn.Add((go, newDist));
             }
 
             nearCarn.Sort((a, b) => a.distance.CompareTo(b.distance));

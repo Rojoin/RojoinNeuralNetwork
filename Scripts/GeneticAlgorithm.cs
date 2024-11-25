@@ -50,22 +50,17 @@ public class GeneticAlgorithmData
         
         bytes.AddRange(BitConverter.GetBytes(eliteCount));
 
-        // Serialize mutationChance (4 bytes for a float)
         bytes.AddRange(BitConverter.GetBytes(mutationChance));
 
-        // Serialize mutationRate (4 bytes for a float)
         bytes.AddRange(BitConverter.GetBytes(mutationRate));
 
-        // Serialize brainStructure
         bytes.AddRange(brainStructure.Serialize());
 
-        // Serialize lastGenome
         bytes.AddRange(SerializeGenomeArray(lastGenome));
 
-        // Serialize generationStalled (4 bytes for an integer)
         bytes.AddRange(BitConverter.GetBytes(generationStalled));
 
-        // Serialize generationCount (4 bytes for an integer)
+
         bytes.AddRange(BitConverter.GetBytes(generationCount));
 
         return bytes.ToArray();
@@ -92,11 +87,9 @@ public class GeneticAlgorithmData
     private byte[] SerializeGenomeArray(Genome[] genomes)
     {
         List<byte> bytes = new List<byte>();
-
-        // Serialize the array length (4 bytes for an integer)
+        
         bytes.AddRange(BitConverter.GetBytes(genomes.Length));
 
-        // Serialize each Genome
         foreach (var genome in genomes)
         {
             bytes.AddRange(genome.Serialize());
@@ -124,31 +117,6 @@ public class GeneticAlgorithmData
     }
 
 
-    // public void Save(string filePath)
-    // {
-    //     Dictionary<string, object?> saveData = SaveSystem.SerializeObject(this);
-    //     string json = JsonConvert.SerializeObject(saveData, Formatting.Indented);
-    //     File.WriteAllText(filePath, json);
-    // }
-    //
-    // public void Load(string filePath)
-    // {
-    //     if (!File.Exists(filePath))
-    //         throw new FileNotFoundException("Save file not found.");
-    //
-    //     string json = File.ReadAllText(filePath);
-    //     Dictionary<string, object?> saveData = JsonConvert.DeserializeObject<Dictionary<string, object?>>(json);
-    //     
-    //     if (saveData != null)
-    //     {
-    //         SaveSystem.DeserializeObject(this, saveData);
-    //     }
-    //     else
-    //     {
-    //         throw new FileNotFoundException("Save data was null.");
-    //     }
-    // }
-    
 
     public void Save()
     {
@@ -223,7 +191,7 @@ public static class GeneticAlgorithm
             data.mutationRate *= 2.8f;
             evolutionType = (EvolutionType)random.Next(1, Enum.GetValues(typeof(EvolutionType)).Length);
         }
-        else if (currentTotalFitness < data.totalFitness)
+        else if (currentTotalFitness < data.totalFitness || currentTotalFitness == 0)
         {
             data.generationStalled++;
             if (data.generationStalled >= data.maxStalledGenerationsUntilEvolve)
