@@ -408,6 +408,7 @@ namespace RojoinNeuralNetwork
         {
             List<GeneticAlgorithmData> dataToPaste = manager.GetAllDatasets();
 
+            //Todo: Genomes are not being apply correctly
             HMainB = dataToPaste[0];
             HEatB = dataToPaste[1];
             HEscapeB = dataToPaste[2];
