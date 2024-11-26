@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using RojoinNeuralNetwork.Utils;
 using Vector2 = System.Numerics.Vector2;
 
