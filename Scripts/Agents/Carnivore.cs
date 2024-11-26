@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using RojoinNeuralNetwork.Utils;
 using Vector2 = System.Numerics.Vector2;
 
 namespace RojoinNeuralNetwork.Scripts.Agents
@@ -36,6 +37,8 @@ namespace RojoinNeuralNetwork.Scripts.Agents
             Vector2 nearFoodPos = (Vector2)parameters[2];
             Action<Vector2> onMove = parameters[3] as Action<Vector2>;
             Herbivore herbivore = parameters[4] as Herbivore;
+            int gridX = (int)parameters[5];
+            int gridY = (int)parameters[6];
             behaviour.AddMultiThreadBehaviour(0, () =>
             {
                 if (position == nearFoodPos)
@@ -53,6 +56,23 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                 {
                     onMove?.Invoke(dir);
                     position += dir;
+                    if (position.X > gridX)
+                    {
+                        position.X = 0;
+                    }
+                    else if (position.X < 0)
+                    {
+                        position.X = gridX;
+                    }
+
+                    if (position.Y > gridY)
+                    {
+                        position.Y = 0;
+                    }
+                    else if (position.Y < 0)
+                    {
+                        position.Y = gridY;
+                    }
                 }
 
                 List<Vector2> newPositions = new List<Vector2> { nearFoodPos };
@@ -76,7 +96,9 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         {
             brain = parameters[0] as Brain;
             positiveHalf = Neuron.Sigmoid(0.5f, brain.p);
+            Logger.Log($"Positive:{positiveHalf}");
             negativeHalf = Neuron.Sigmoid(-0.5f, brain.p);
+            Logger.Log($"Negative:{negativeHalf}");
             return default;
         }
 
@@ -114,12 +136,15 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                     {
                         if (herbivore.CanBeEaten())
                         {
+                            herbivore.EatBody();
                             //Fitness ++
                             onEaten(++counterEating);
                             brain.FitnessReward += 20;
-                            if (counterEating == maxEating)
+                            Logger.Log($"Carnivore-{this.GetHashCode()}Has eaten {counterEating} food");
+                            if (counterEating >= maxEating)
                             {
                                 brain.FitnessReward += 30;
+                                Logger.Log($"Carnivore-{this.GetHashCode()}Has eaten enough food");
                                 onHasEatenEnoughFood.Invoke(true);
                             }
                             //If comi 5
@@ -163,7 +188,9 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         public Brain moveBrain;
         public Brain eatBrain;
         int counterEating = 0;
-        int maxEating = 3;
+        Vector2 nearestFoodPosition;
+        Herbivore herbivore;
+        int maxEating = 1;
         public bool hasEatenEnoughFood = false;
 
 
@@ -180,12 +207,12 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                 {
                     return new object[]
                     {
-                        eatBrain.outputs, position, GetNearFoodPos(),
+                        eatBrain.outputs, position, nearestFoodPosition,
                         hasEatenEnoughFood, counterEating, maxEating,
                         onHasEantenEnoughFood = b =>
                             hasEatenEnoughFood = b,
                         onEaten = i => counterEating = i,
-                        GetNearHerbivore()
+                        herbivore
                     };
                 });
             fsm.AddBehaviour<CarnivoreMoveState>(CarnivoreStates.Move,
@@ -193,9 +220,9 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                 {
                     return new object[]
                     {
-                        moveBrain.outputs, position, GetNearFoodPos(),
+                        moveBrain.outputs, position, nearestFoodPosition,
                         onMove = MoveTo,
-                        GetNearHerbivore()
+                        herbivore,populationManagerLib.GetGridX(),populationManagerLib.GetGridY()
                     };
                 });
             fsm.SetTransition(CarnivoreStates.Eat, CarnivoreFlags.ToMove, CarnivoreStates.Move);
@@ -232,7 +259,8 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public override void PreUpdate(float deltaTime)
         {
-            Vector2 nearestFoodPosition = GetNearFoodPos();
+            nearestFoodPosition = GetNearFoodPos();
+            herbivore = GetNearHerbivore();
 
             mainBrain.inputs = new[]
                 { position.X, position.Y, nearestFoodPosition.X, nearestFoodPosition.Y, hasEatenEnoughFood ? 1 : -1, };
@@ -254,7 +282,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public Herbivore GetNearHerbivore()
         {
-            return PopulationManagerLib.GetNearHerbivore(position);
+            return PopulationManagerLib.GetNearHerbivoreCarnivore(position);
         }
 
         public override void MoveTo(Vector2 dir)

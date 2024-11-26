@@ -66,6 +66,7 @@ namespace RojoinNeuralNetwork
 
     public abstract class SporeAgent
     {
+        public int lives = 5;
         public Vector2 position;
     }
     [System.Serializable]

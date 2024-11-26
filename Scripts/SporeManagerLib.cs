@@ -417,16 +417,16 @@ namespace RojoinNeuralNetwork
             CMoveB = dataToPaste[6];
             SMainB = dataToPaste[7];
             SFlockB = dataToPaste[8];
-            manager.ClearDatasets();
-            manager.AddDataset(HMainB);
-            manager.AddDataset(HEatB);
-            manager.AddDataset(HEscapeB);
-            manager.AddDataset(HMoveB);
-            manager.AddDataset(CMainB);
-            manager.AddDataset(CEatB);
-            manager.AddDataset(CMoveB);
-            manager.AddDataset(SMainB);
-            manager.AddDataset(SFlockB);
+            // manager.ClearDatasets();
+            // manager.AddDataset(HMainB);
+            // manager.AddDataset(HEatB);
+            // manager.AddDataset(HEscapeB);
+            // manager.AddDataset(HMoveB);
+            // manager.AddDataset(CMainB);
+            // manager.AddDataset(CEatB);
+            // manager.AddDataset(CMoveB);
+            // manager.AddDataset(SMainB);
+            // manager.AddDataset(SFlockB);
 
 
             generation = HMainB.generationCount;
@@ -446,9 +446,13 @@ namespace RojoinNeuralNetwork
         {
             for (int i = 0; i < brains.Count; i++)
             {
-                // Brain brain =;
-                brains[i] = new Brain(info.brainStructure);
-                brains[i].SetWeights(info.lastGenome[i].genome);
+                int counter = i;
+                if (counter >= info.lastGenome.Length)
+                {
+                    counter -= info.lastGenome.Length;
+                }
+                brains[counter] = new Brain(info.brainStructure);
+                brains[counter].SetWeights(info.lastGenome[counter].genome);
             }
         }
 
@@ -577,6 +581,56 @@ namespace RojoinNeuralNetwork
             }
 
             return nearest;
+        }      
+        public virtual Herbivore GetNearHerbivoreScav(Vector2 position)
+        {
+            Herbivore nearest = herbis[0];
+            float distance = float.MaxValue;
+
+            foreach (Herbivore go in herbis)
+            {
+                if (!go.IsCorpse())
+                {
+                    continue;
+                }
+                if (go.position == position)
+                {
+                    return go;
+                }
+                float newDist = Vector2.Distance(position, go.position);
+                if (newDist < distance)
+                {
+                    nearest = go;
+                    distance = newDist;
+                }
+            }
+
+            return nearest;
+        }
+        public virtual Herbivore GetNearHerbivoreCarnivore(Vector2 position)
+        {
+            Herbivore nearest = herbis[0];
+            float distance = float.MaxValue;
+
+            foreach (Herbivore go in herbis)
+            {
+                if (go.IsCorpse())
+                {
+                    continue;
+                }
+                if (go.position == position)
+                {
+                    return go;
+                }
+                float newDist = Vector2.Distance(position, go.position);
+                if (newDist < distance)
+                {
+                    nearest = go;
+                    distance = newDist;
+                }
+            }
+
+            return nearest;
         }
 
         public int GetGridX()
@@ -616,6 +670,10 @@ namespace RojoinNeuralNetwork
                 }
             }
 
+            if (nearest == null)
+            {
+                nearest = plants[0];
+            }
             return nearest;
         }
 
@@ -669,6 +727,8 @@ namespace RojoinNeuralNetwork
         public List<Scavenger> GetNearScavs(Scavenger scavenger);
         public Plant GetNearPlant(Vector2 position);
         public Herbivore GetNearHerbivore(Vector2 position);
+        public Herbivore GetNearHerbivoreScav(Vector2 position);
+        public Herbivore GetNearHerbivoreCarnivore(Vector2 position);
         public int GetGridX();
         public int GetGridY();
     }

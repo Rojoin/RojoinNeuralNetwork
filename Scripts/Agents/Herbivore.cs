@@ -28,6 +28,8 @@ namespace RojoinNeuralNetwork.Scripts.Agents
     {
         List<Vector2> nearEnemyPositions = new List<Vector2>();
         private float previousDistance;
+        private const float _brainFitnessMultiplier = 0.05f;
+        private const float _brainFitnessReward = 20;
 
         public override BehaviourActions GetTickBehaviours(params object[] parameters)
         {
@@ -106,12 +108,13 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                     float distanceFromFood = GetDistanceFrom(newPositions);
                     if (distanceFromFood >= previousDistance)
                     {
-                        brain.FitnessReward += 20;
-                        brain.FitnessMultiplier += 0.05f;
+                        Logger.Log($"Herbivore-{this.GetHashCode()}: has come close to food.");
+                        brain.FitnessReward += _brainFitnessReward;
+                        brain.FitnessMultiplier += _brainFitnessMultiplier;
                     }
                     else
                     {
-                        brain.FitnessMultiplier -= 0.05f;
+                        brain.FitnessMultiplier -= _brainFitnessMultiplier;
                     }
 
                     previousDistance = distanceFromFood;
@@ -157,8 +160,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                     return;
                 }
 
-                Logger.Log($"{this.GetHashCode()}: currentpos {position}, near food pos {nearFoodPos}.");
-                Logger.Log($"{this.GetHashCode()}: output = {outputs[0]}.");
+
                 if (outputs[0] > 0f)
                 {
                     if (position == nearFoodPos)
@@ -168,12 +170,12 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                             plant.Eat();
                             onEaten(++counterEating);
                             brain.FitnessReward += 20;
-                            Logger.Log($"{this.GetHashCode()}: has {counterEating} eats.");
+                            Logger.Log($"Herbivore-{this.GetHashCode()}: has {counterEating} eats.");
                             if (counterEating >= maxEating)
                             {
                                 brain.FitnessReward += 30;
                                 onHasEatenEnoughFood.Invoke(true);
-                                Logger.Log($"{this.GetHashCode()}: has easten enough food.");
+                                Logger.Log($"Herbivore-{this.GetHashCode()}: has easten enough food.");
                             }
                             //If comi 5
                             // fitness skyrocket
@@ -291,7 +293,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                     float distanceFromEnemies = GetDistanceFrom(nearEnemyPositions);
                     if (distanceFromEnemies <= previousDistance)
                     {
-                        Logger.Log($"{this.GetHashCode()}: got away from enemies.");
+                        Logger.Log($"Herbivore-{this.GetHashCode()}: got away from enemies.");
                         brain.FitnessReward += 20;
                         brain.FitnessMultiplier += 0.05f;
                     }
@@ -376,7 +378,6 @@ namespace RojoinNeuralNetwork.Scripts.Agents
     {
         List<Vector2> nearEnemy = new List<Vector2>();
         List<Vector2> nearFood = new List<Vector2>();
-        public int lives = 3;
         private int livesUntilCountdownDissapears = 30;
         private int maxFood = 1;
         int currentFood = 0;
@@ -460,17 +461,17 @@ namespace RojoinNeuralNetwork.Scripts.Agents
             {
                 case 0:
                     fsm.Transition(HeribovoreStates.Escape);
-                    Logger.Log($"{this.GetHashCode()}: change to Escape.");
+                    //             Logger.Log($"{this.GetHashCode()}: change to Escape.");
                     break;
                 case 1:
                     fsm.Transition(HeribovoreStates.Move);
-                    Logger.Log($"{this.GetHashCode()}: change to Move.");
+                    // Logger.Log($"{this.GetHashCode()}: change to Move.");
 
                     break;
                 case 2:
                     fsm.Transition(HeribovoreStates.Eat);
 
-                    Logger.Log($"{this.GetHashCode()}: change to Eat.");
+                    // Logger.Log($"{this.GetHashCode()}: change to Eat.");
                     break;
                 default:
                     break;
@@ -581,13 +582,17 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public bool CanBeEaten()
         {
-            if (fsm.currentState == (int)HeribovoreStates.Dead)
-            {
-                fsm.ForceState(HeribovoreStates.Corpse);
-                return true;
-            }
+            return fsm.currentState == (int)HeribovoreStates.Dead;
+        }
 
-            return false;
+        public bool IsCorpse()
+        {
+            return fsm.currentState == (int)HeribovoreStates.Corpse;
+        }
+
+        public void EatBody()
+        {
+            fsm.ForceState(HeribovoreStates.Corpse);
         }
 
         public Plant GetNearestFood()
@@ -603,7 +608,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
     public class Plant : SporeAgent
     {
-        private int lives = 5;
+
         public bool isAvailable = true;
 
         public void Eat()

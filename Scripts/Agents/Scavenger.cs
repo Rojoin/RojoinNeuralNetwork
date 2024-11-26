@@ -22,7 +22,9 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         private float speed;
         private float radius;
         private Brain flockingBrain;
-
+        Vector2 Aligment ;
+        Vector2 Cohesion  ;
+        Vector2 Separation;
         public override BehaviourActions GetTickBehaviours(params object[] parameters)
         {
             BehaviourActions behaviour = new BehaviourActions();
@@ -86,64 +88,54 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
             behaviour.AddMultiThreadBehaviour(1, () =>
             {
-                Vector2 flokingInfluence =
-                    dir * (flockingBrain.outputs[0] + flockingBrain.outputs[1] + flockingBrain.outputs[2]);
+                Aligment = new Vector2(flockingBrain.outputs[0], flockingBrain.outputs[1]);
+                Aligment = Vector2.Normalize(Aligment);
+                Cohesion  = new Vector2(flockingBrain.outputs[2], flockingBrain.outputs[3]);
+                Cohesion = Vector2.Normalize(Cohesion);
+                Separation = new Vector2(flockingBrain.outputs[4], flockingBrain.outputs[5]);
+                Separation = Vector2.Normalize(Separation);
+                float aligmentWeight = 2;
+                float cohesionWeight = 2;
+                float separationWeight = 2;
+                Vector2 flokingInfluence = Aligment * aligmentWeight + Cohesion * cohesionWeight +
+                                           Separation * separationWeight + dir;
 
-                Vector2 finalDirection = dir + flokingInfluence;
 
-                finalDirection = Vector2.Normalize(finalDirection);
+                Vector2 finalDirection = Vector2.Normalize(flokingInfluence);
                 onMove.Invoke(finalDirection);
-                 position += finalDirection * speed * deltaTime;
+                position += finalDirection * speed * deltaTime;
 
-                 //
-                // onMove.Invoke(finalPosition);
-            });
-
-            //fitness
-            behaviour.AddMultiThreadBehaviour(2, () =>
-            {
-
-                //fitness Floking
-                foreach (Scavenger scavenger in nearScavengers)
+        
+                if (AlignmentCalc(nearScavengers) != Aligment)
                 {
-                    //Alignment
-                    float diff = MathF.Abs(rotation - scavenger.rotation);
+                    flockingBrain.FitnessMultiplier -= 0.05f;
+                }
+                else
+                {
+                    flockingBrain.FitnessReward += 1;
+                }
 
-                    if (diff > 180)
-                        diff = 360 - diff;
+                //Cohesion
+                if (CohesionCalc(nearScavengers) != Cohesion)
+                {
+                    flockingBrain.FitnessMultiplier -= 0.05f;
+                }
+                else
+                {
+                    flockingBrain.FitnessReward += 1;
+                }
 
-                    if (diff > 90)
-                    {
-                        flockingBrain.FitnessMultiplier -= 0.05f;
-                    }
-                    else
-                    {
-                        flockingBrain.FitnessReward += 1;
-                    }
-
-                    //Cohesion
-                    if (Vector2.Distance(position, scavenger.position) > radius * 6)
-                    {
-                        flockingBrain.FitnessMultiplier -= 0.05f;
-                    }
-                    else
-                    {
-                        flockingBrain.FitnessReward += 1;
-                    }
-
-                    //Separation
-                    if (Vector2.Distance(position, scavenger.position) < radius * 2)
-                    {
-                        flockingBrain.FitnessMultiplier -= 0.05f;
-                    }
-                    else
-                    {
-                        flockingBrain.FitnessReward += 1;
-                    }
-
-
+                //Separation
+                if (SeparationCalc(nearScavengers) != Separation)
+                {
+                    flockingBrain.FitnessMultiplier -= 0.05f;
+                }
+                else
+                {
+                    flockingBrain.FitnessReward += 1;
                 }
             });
+            
 
             return behaviour;
         }
@@ -163,6 +155,46 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         {
             return default;
         }
+        
+        public Vector2 AlignmentCalc(List<Scavenger> scavengers)
+        {
+
+            Vector2 avg = Vector2.Zero;
+            foreach (Scavenger b in scavengers)
+            {
+                avg += b.dir * b.speed;
+            }
+            avg /= scavengers.Count;
+            avg = Vector2.Normalize(avg);
+            return avg;
+        }
+
+        public Vector2 CohesionCalc(List<Scavenger> scavengers)
+        {
+     
+            Vector2 avg = Vector2.Zero;
+            foreach (Scavenger b in scavengers)
+            {
+                avg += b.position;
+            }
+            avg /= scavengers.Count;
+            avg = (avg - position);
+            avg = Vector2.Normalize(avg);
+            return avg;
+        }
+
+        public Vector2 SeparationCalc(List<Scavenger> scavengers)
+        {
+            Vector2 avg = Vector2.Zero;
+            foreach (Scavenger b in scavengers)
+            {
+                avg += (b.position - position);
+            }
+            avg /= scavengers.Count;
+            avg *= -1;
+            avg = Vector2.Normalize(avg);
+            return avg;
+        }
     }
 
 
@@ -170,11 +202,14 @@ namespace RojoinNeuralNetwork.Scripts.Agents
     {
         public Brain flockingBrain;
         float minEatRadius;
-        protected Vector2 dir = new Vector2(1, 1);
+        public Vector2 dir = new Vector2(1, 1);
+        protected Vector2 nearFoodPos;
+        protected Herbivore nearHerbivore;
+        protected List<Scavenger> nearScav = new List<Scavenger>();
         public bool hasEaten = false;
         public int counterEating = 0;
         public float rotation = 0;
-        protected float speed = 5;
+        public float speed = 5;
         protected float radius = 2;
 
         public void Reset(Vector2 position)
@@ -198,9 +233,9 @@ namespace RojoinNeuralNetwork.Scripts.Agents
                 {
                     return new object[15]
                     {
-                        mainBrain.outputs, position, GetNearFoodPos(), minEatRadius, hasEaten, GetNearHerbivore(),
+                        mainBrain.outputs, position, nearFoodPos, minEatRadius, hasEaten, nearHerbivore,
                         setDir = MoveTo, counterEating, setEatingCounter = b => counterEating = b, dir, rotation, speed,
-                        radius, GetNearScavs(), deltaTime
+                        radius, nearScav, deltaTime
                     };
                 });
 
@@ -214,14 +249,16 @@ namespace RojoinNeuralNetwork.Scripts.Agents
         public override void PreUpdate(float deltaTime)
         {
             this.deltaTime = deltaTime;
-            var nearFoodPos = GetNearFoodPos();
+            nearFoodPos = GetNearFoodPos();
             mainBrain.inputs = new[] { position.X, position.Y, minEatRadius, nearFoodPos.X, nearFoodPos.Y };
-       
-            var ner = GetNearScavs();
+
+            nearScav = GetNearScavs();
+            nearHerbivore = GetNearHerbivore();
             flockingBrain.inputs = new[]
             {
-                position.X, position.Y, ner[0].position.X, ner[0].position.Y, ner[1].position.X, ner[1].position.Y,
-                ner[0].rotation, ner[1].rotation
+                position.X, position.Y, nearScav[0].position.X, nearScav[0].position.Y, nearScav[1].position.X,
+                nearScav[1].position.Y,
+                nearScav[0].rotation, nearScav[1].rotation
             };
         }
 
@@ -260,7 +297,7 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public Herbivore GetNearHerbivore()
         {
-            return PopulationManagerLib.GetNearHerbivore(position);
+            return PopulationManagerLib.GetNearHerbivoreScav(position);
         }
 
         public List<Scavenger> GetNearScavs()
@@ -275,7 +312,6 @@ namespace RojoinNeuralNetwork.Scripts.Agents
 
         public override void GiveFitnessToMain()
         {
-            
             flockingBrain.ApplyFitness();
             mainBrain.FitnessMultiplier = 1.0f;
             mainBrain.FitnessReward = 0f;
